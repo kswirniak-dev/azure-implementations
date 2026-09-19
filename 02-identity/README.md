@@ -28,7 +28,7 @@ Every step is idempotent: existing users, group, role, assignment and VM are det
 
 ```bash
 export LAB_TMP_PASSWORD='<temporary password>'
-./identity.sh
+./deploy.sh
 ```
 
 The script prints the subscription id, the resolved default domain and the role name at the start, and finishes with the SSH command, the whitelisted IP and a `run-command` fallback for working without SSH.
