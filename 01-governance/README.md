@@ -11,7 +11,7 @@ Foundaiton of subscription management: resource groups with naming convention an
 - Policy: allowed regions limited to Poland Central and West Europe
 - Lock `CanNotDelete` on RG shared
 
-## implementation
+## Implementation
 
 ```bash
 ./deploy.sh
