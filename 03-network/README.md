@@ -1,9 +1,11 @@
-# Lab 03 – Sieć hub-and-spoke
+# Lab 03 – hub-and-spoke network
 
-## Cel
-Topologia hub-and-spoke z wymuszeniem ruchu spoke→spoke przez centralne urządzenie sieciowe, segmentacją NSG i prywatnym dostępem do Storage przez Private Endpoint.
+## Goal
 
-## Architektura
+Topology hub-and-spoke with movement spoke→spoke enforced by central network appliance, segmentation NSG and private access to Storage via Private Endpoint.
+
+## Architecture
+
 ```
             vnet-hub 10.0.0.0/16
            /  (NVA 10.0.1.4)  \
@@ -11,28 +13,33 @@ Topologia hub-and-spoke z wymuszeniem ruchu spoke→spoke przez centralne urząd
 vnet-spoke1 10.1.0.0/16   vnet-spoke2 10.2.0.0/16
  (workload + NSG)          (data + Private Endpoint → Storage)
 ```
-- Peering dwukierunkowy hub↔spoke z `allowForwardedTraffic`
-- UDR na subnetach spoke'ów: next hop `VirtualAppliance` (10.0.1.4)
-- NVA: VM B1s z `enableIPForwarding` — zamiennik Azure Firewall dla labu
-- Storage z `publicNetworkAccess: Disabled`, dostęp wyłącznie przez Private Endpoint + prywatna strefa DNS
 
-## Wdrożenie
+- bidirectional peering hub↔spoke with `allowForwardedTraffic`
+- UDR on subnets of spokes: next hop `VirtualAppliance` (10.0.1.4)
+- NVA: VM B1s with `enableIPForwarding` — substitute for Azure Firewall
+- Storage with `publicNetworkAccess: Disabled`, access only via Private Endpoint + private DNS zone
+
+## Implementation
+
 ```bash
 ./deploy.sh
 ```
 
-## Weryfikacja
-1. `az network vnet peering list -g rg-lab03-network --vnet-name vnet-hub -o table` → status `Connected`
-2. Z VM w spoke1: `nslookup <storage>.blob.core.windows.net` → adres prywatny 10.2.1.x
-3. Effective routes na NIC w spoke: `az network nic show-effective-route-table` → trasy przez 10.0.1.4
-4. Publiczny dostęp do blob → `403` / connection refused
+## Verification
 
-## Decyzje projektowe
-- NVA (VM z IP forwarding) zamiast Azure Firewall — Firewall Standard to ~1,25 USD/h, nieproporcjonalny koszt do celu labu; architektura routingu identyczna
-- Prywatna strefa DNS linkowana do hub — wzorzec centralnego DNS (w realnym środowisku spoke'i korzystają z DNS w hubie)
-- NSG deny na ruch bezpośredni spoke→spoke — segmentacja wymuszona podwójnie (routing + filtracja)
+1. `az network vnet peering list -g rg-network --vnet-name vnet-hub -o table` → status `Connected`
+2. With VM in spoke1: `nslookup <storage>.blob.core.windows.net` → private adress 10.2.1.x
+3. Effective routes for NIC in spoke: `az network nic show-effective-route-table` → routes through 10.0.1.4
+4. Public access to BLOB → `403` / connection refused
 
-## Sprzątanie
+## Project decisions
+
+- NVA (VM with IP forwarding) instead of Azure Firewall — Firewall Standard us ~1,25 EUR/h, non-proportional for the goal of the example; architecaz ture of routing is identical though
+- Private DNS zone linked to hub — pattern of central DNS (in real environment spokes use DNS in the hub)
+- NSG deny for direct traffic spoke→spoke — segit gmentation double enforced (routing + filtration)
+
+## Cleanup
+
 ```bash
-az group delete -n rg-lab03-network --yes --no-wait
+az group delete -n rg-network --yes --no-wait
 ```
