@@ -1,0 +1,26 @@
+// Przykladowe zapytania KQL do workspace (wklej w Logs)
+
+// 1. Heartbeat VM - ktore maszyny raportuja, ostatni kontakt
+Heartbeat
+| summarize LastSeen = max(TimeGenerated) by Computer
+| order by LastSeen desc
+
+// 2. Srednie CPU per komputer, ostatnia godzina (wymaga Azure Monitor Agent + DCR z Perf)
+Perf
+| where ObjectName == "Processor" and CounterName == "% Processor Time"
+| where TimeGenerated > ago(1h)
+| summarize avg(CounterValue) by Computer, bin(TimeGenerated, 5m)
+| render timechart
+
+// 3. Nieudane logowania SSH (Syslog z VM Linux)
+Syslog
+| where Facility == "auth" and SyslogMessage has "Failed password"
+| summarize Attempts = count() by Computer, bin(TimeGenerated, 1h)
+| order by Attempts desc
+
+// 4. Operacje administracyjne z Activity Log (po podpieciu diagnostic setting subskrypcji)
+AzureActivity
+| where CategoryValue == "Administrative"
+| where ActivityStatusValue == "Success"
+| project TimeGenerated, Caller, OperationNameValue, ResourceGroup
+| order by TimeGenerated desc
