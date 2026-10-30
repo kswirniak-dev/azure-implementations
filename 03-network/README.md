@@ -34,12 +34,12 @@ vnet-spoke1 10.1.0.0/16   vnet-spoke2 10.2.0.0/16
 
 ## Project decisions
 
-- NVA (VM with IP forwarding) instead of Azure Firewall — Firewall Standard us ~1,25 EUR/h, non-proportional for the goal of the example; architecaz ture of routing is identical though
+- NVA (VM with IP forwarding) instead of Azure Firewall — Firewall Standard us ~1,25 EUR/h, non-proportional for the goal of the example; architecture of routing is identical though
 - Private DNS zone linked to hub — pattern of central DNS (in real environment spokes use DNS in the hub)
 - NSG deny for direct traffic spoke→spoke — segmentation double enforced (routing + filtration)
 
 ## Cleanup
 
 ```bash
-az group delete -n rg-network --yes --no-wait
+./clenup.sh
 ```
