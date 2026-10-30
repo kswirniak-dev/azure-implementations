@@ -316,7 +316,7 @@ resource nsgWorkload 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
           destinationAddressPrefix: '*'
           destinationPortRange: '22'
         }
-      }gitr 
+      }
       {
         name: 'Deny-Spoke-To-Spoke-Direct'
         properties: {
