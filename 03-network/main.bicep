@@ -12,7 +12,7 @@ resource hubVnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
   location: location
   tags: tags
   properties: {
-    addressSpace: { addressPrefixes: [ '10.0.0.0/16' ] }
+    addressSpace: { addressPrefixes: ['10.0.0.0/16'] }
     subnets: [
       { name: 'snet-nva', properties: { addressPrefix: '10.0.1.0/24' } }
       { name: 'snet-mgmt', properties: { addressPrefix: '10.0.2.0/24' } }
@@ -20,20 +20,22 @@ resource hubVnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
   }
 }
 
-// NVA: mala VM z IP forwarding zamiast Azure Firewall (koszt!)
+// NVA: small VM with IP forwarding instead of Azure Firewall (koszt!)
 resource nvaNic 'Microsoft.Network/networkInterfaces@2024-01-01' = {
   name: 'nic-nva'
   location: location
   properties: {
     enableIPForwarding: true
-    ipConfigurations: [ {
-      name: 'ipconfig1'
-      properties: {
-        subnet: { id: hubVnet.properties.subnets[0].id }
-        privateIPAllocationMethod: 'Static'
-        privateIPAddress: '10.0.1.4'
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          subnet: { id: hubVnet.properties.subnets[0].id }
+          privateIPAllocationMethod: 'Static'
+          privateIPAddress: '10.0.1.4'
+        }
       }
-    } ]
+    ]
   }
 }
 
@@ -42,7 +44,7 @@ resource nvaVm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
   location: location
   tags: tags
   properties: {
-    hardwareProfile: { vmSize: 'Standard_B1s' }
+    hardwareProfile: { vmSize: 'Standard_D2s_v3' }
     osProfile: {
       computerName: 'vm-nva'
       adminUsername: adminUsername
@@ -58,7 +60,7 @@ resource nvaVm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
       }
       osDisk: { createOption: 'FromImage', managedDisk: { storageAccountType: 'Standard_LRS' } }
     }
-    networkProfile: { networkInterfaces: [ { id: nvaNic.id } ] }
+    networkProfile: { networkInterfaces: [{ id: nvaNic.id }] }
   }
 }
 
@@ -68,15 +70,17 @@ resource spoke1Vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
   location: location
   tags: tags
   properties: {
-    addressSpace: { addressPrefixes: [ '10.1.0.0/16' ] }
-    subnets: [ {
-      name: 'snet-workload'
-      properties: {
-        addressPrefix: '10.1.1.0/24'
-        networkSecurityGroup: { id: nsgWorkload.id }
-        routeTable: { id: rtSpokes.id }
+    addressSpace: { addressPrefixes: ['10.1.0.0/16'] }
+    subnets: [
+      {
+        name: 'snet-workload'
+        properties: {
+          addressPrefix: '10.1.1.0/24'
+          networkSecurityGroup: { id: nsgWorkload.id }
+          routeTable: { id: rtSpokes.id }
+        }
       }
-    } ]
+    ]
   }
 }
 
@@ -85,19 +89,21 @@ resource spoke2Vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
   location: location
   tags: tags
   properties: {
-    addressSpace: { addressPrefixes: [ '10.2.0.0/16' ] }
-    subnets: [ {
-      name: 'snet-data'
-      properties: {
-        addressPrefix: '10.2.1.0/24'
-        routeTable: { id: rtSpokes.id }
-        privateEndpointNetworkPolicies: 'Enabled'
+    addressSpace: { addressPrefixes: ['10.2.0.0/16'] }
+    subnets: [
+      {
+        name: 'snet-data'
+        properties: {
+          addressPrefix: '10.2.1.0/24'
+          routeTable: { id: rtSpokes.id }
+          privateEndpointNetworkPolicies: 'Enabled'
+        }
       }
-    } ]
+    ]
   }
 }
 
-// ===== PEERING (dwustronny hub<->spoke1, hub<->spoke2) =====
+// ===== PEERING (bidirectional hub<->spoke1, hub<->spoke2) =====
 resource peerHubSpoke1 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2024-01-01' = {
   parent: hubVnet
   name: 'peer-hub-to-spoke1'
@@ -172,7 +178,7 @@ resource nsgWorkload 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
   }
 }
 
-// ===== UDR: ruch spoke->spoke przez NVA w hubie =====
+// ===== UDR: traffic spoke->spoke via NVA in hub =====
 resource rtSpokes 'Microsoft.Network/routeTables@2024-01-01' = {
   name: 'rt-spokes-via-hub'
   location: location
@@ -199,7 +205,7 @@ resource rtSpokes 'Microsoft.Network/routeTables@2024-01-01' = {
   }
 }
 
-// ===== STORAGE + PRIVATE ENDPOINT w spoke2 =====
+// ===== STORAGE + PRIVATE ENDPOINT in spoke2 =====
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'stlab03${uniqueString(resourceGroup().id)}'
   location: location
@@ -218,13 +224,15 @@ resource pe 'Microsoft.Network/privateEndpoints@2024-01-01' = {
   tags: tags
   properties: {
     subnet: { id: spoke2Vnet.properties.subnets[0].id }
-    privateLinkServiceConnections: [ {
-      name: 'plsc-blob'
-      properties: {
-        privateLinkServiceId: storage.id
-        groupIds: [ 'blob' ]
+    privateLinkServiceConnections: [
+      {
+        name: 'plsc-blob'
+        properties: {
+          privateLinkServiceId: storage.id
+          groupIds: ['blob']
+        }
       }
-    } ]
+    ]
   }
 }
 
@@ -247,10 +255,12 @@ resource peDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@202
   parent: pe
   name: 'default'
   properties: {
-    privateDnsZoneConfigs: [ {
-      name: 'blob-config'
-      properties: { privateDnsZoneId: privateDnsZone.id }
-    } ]
+    privateDnsZoneConfigs: [
+      {
+        name: 'blob-config'
+        properties: { privateDnsZoneId: privateDnsZone.id }
+      }
+    ]
   }
 }
 
