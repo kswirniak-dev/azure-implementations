@@ -83,6 +83,77 @@ resource spoke1Vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
     ]
   }
 }
+resource pipSpoke1 'Microsoft.Network/publicIPAddresses@2024-01-01' = {
+  name: 'pip-spoke1'
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+
+resource spoke1Nic 'Microsoft.Network/networkInterfaces@2024-01-01' = {
+  name: 'nic-spoke1'
+  location: location
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          subnet: {
+            id: spoke1Vnet.properties.subnets[0].id
+          }
+          privateIPAllocationMethod: 'Dynamic'
+          publicIPAddress: {
+            id: pipSpoke1.id
+          }
+        }
+      }
+    ]
+  }
+}
+
+resource spoke1Vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
+  name: 'vm-spoke1'
+  location: location
+  tags: tags
+  properties: {
+    hardwareProfile: {
+      vmSize: 'Standard_D2s_v3'
+    }
+    osProfile: {
+      computerName: 'vm-spoke1'
+      adminUsername: adminUsername
+      adminPassword: adminPassword
+      linuxConfiguration: {
+        disablePasswordAuthentication: false
+      }
+    }
+    storageProfile: {
+      imageReference: {
+        publisher: 'Canonical'
+        offer: 'ubuntu-24_04-lts'
+        sku: 'server'
+        version: 'latest'
+      }
+      osDisk: {
+        createOption: 'FromImage'
+        managedDisk: {
+          storageAccountType: 'Standard_LRS'
+        }
+      }
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: spoke1Nic.id
+        }
+      ]
+    }
+  }
+}
 
 resource spoke2Vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
   name: 'vnet-spoke2'
@@ -100,6 +171,78 @@ resource spoke2Vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
         }
       }
     ]
+  }
+}
+
+resource pipSpoke2 'Microsoft.Network/publicIPAddresses@2024-01-01' = {
+  name: 'pip-spoke2'
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+
+resource spoke2Nic 'Microsoft.Network/networkInterfaces@2024-01-01' = {
+  name: 'nic-spoke2'
+  location: location
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          subnet: {
+            id: spoke2Vnet.properties.subnets[0].id
+          }
+          privateIPAllocationMethod: 'Dynamic'
+          publicIPAddress: {
+            id: pipSpoke2.id
+          }
+        }
+      }
+    ]
+  }
+}
+
+resource spoke2Vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
+  name: 'vm-spoke2'
+  location: location
+  tags: tags
+  properties: {
+    hardwareProfile: {
+      vmSize: 'Standard_D2s_v3'
+    }
+    osProfile: {
+      computerName: 'vm-spoke2'
+      adminUsername: adminUsername
+      adminPassword: adminPassword
+      linuxConfiguration: {
+        disablePasswordAuthentication: false
+      }
+    }
+    storageProfile: {
+      imageReference: {
+        publisher: 'Canonical'
+        offer: 'ubuntu-24_04-lts'
+        sku: 'server'
+        version: 'latest'
+      }
+      osDisk: {
+        createOption: 'FromImage'
+        managedDisk: {
+          storageAccountType: 'Standard_LRS'
+        }
+      }
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: spoke2Nic.id
+        }
+      ]
+    }
   }
 }
 
@@ -161,6 +304,19 @@ resource nsgWorkload 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
           destinationPortRange: '22'
         }
       }
+      {
+        name: 'Allow-SSH-Internet'
+        properties: {
+          priority: 110
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '22'
+        }
+      }gitr 
       {
         name: 'Deny-Spoke-To-Spoke-Direct'
         properties: {
@@ -247,6 +403,29 @@ resource dnsLinkHub 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-
   location: 'global'
   properties: {
     virtualNetwork: { id: hubVnet.id }
+    registrationEnabled: false
+  }
+}
+
+resource dnsLinkSpoke1 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
+  parent: privateDnsZone
+  name: 'link-spoke1'
+  location: 'global'
+  properties: {
+    virtualNetwork: {
+      id: spoke1Vnet.id
+    }
+    registrationEnabled: false
+  }
+}
+resource dnsLinkSpoke2 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
+  parent: privateDnsZone
+  name: 'link-spoke2'
+  location: 'global'
+  properties: {
+    virtualNetwork: {
+      id: spoke2Vnet.id
+    }
     registrationEnabled: false
   }
 }
